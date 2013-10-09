@@ -4,9 +4,8 @@ class ApplicationController < ActionController::Base
   protect_from_forgery with: :exception
 
   def make_url(object, potential)
-    id = object.id
     ob_class = object.class
-
+    
     arr = ob_class.all.pluck(:url).compact
     arr = arr.grep /^#{potential}/
     
