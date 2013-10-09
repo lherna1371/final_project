@@ -5,7 +5,7 @@
 # FlikBites
 
 FlikBites allows for users to view crowdsourced photos of restaurant dishes
-
+The deployed version can be found at http://flikbites.herokuapp.com/.
 
 # SETUP AND CONFIGURATION
 
