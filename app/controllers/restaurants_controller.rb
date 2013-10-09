@@ -31,16 +31,11 @@ class RestaurantsController < ApplicationController
   def create
     new_rest = Restaurant.new(restaurant_attributes)
     if params[:restaurant][:name] != ""
-      potential = new_rest.name.downcase.gsub(' ','')
-      new_rest.url = make_url(new_rest, potential)
+      potential_url = potential(new_rest.name)
+      new_rest.url = make_url(new_rest, potential_url)
       if new_rest.save
-        if request.xhr?
-          loc = loc_hash(new_rest)
-          render :json => loc
-        else
-          flash[:success] = "Restaurant Added"
-          redirect_to "/#{new_rest.url}/dishes"
-        end
+        flash[:success] = "Restaurant Added"
+        redirect_to "/#{new_rest.url}/dishes"
       else
         flash[:error] = "Restaurant was not saved"
         render 'new'
@@ -81,7 +76,7 @@ class RestaurantsController < ApplicationController
   end
 
   def desc
-    @rest = Restaurant.where(:url => params[:restname]).first
+    @rest = Restaurant.find_by_url(params[:restname])
     render 'desc', :layout => false
   end
 
@@ -92,12 +87,9 @@ class RestaurantsController < ApplicationController
   end
 
   def setcoords
-    if params[:url] || params[:id]
+    if params[:url]
       rest = Restaurant.find_by_url(params[:url])
-      rest ||= Restaurant.find(params[:id])
-      rest.latitude = params[:lat]
-      rest.longitude = params[:lon]
-      rest.save
+      rest.update_attributes(:latitude => params[:lat], :longitude => params[:lon])
       render json: rest
     end
   end

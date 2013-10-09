@@ -17,13 +17,6 @@ module RestaurantsHelper
     coords
   end
 
-  def loc_hash(rest)
-    loc = {}
-    loc[:id] = rest.id
-    loc[:address] = street_city(rest)
-    loc      
-  end
-
   def potential(string)
     string.downcase.gsub(' ','')
   end

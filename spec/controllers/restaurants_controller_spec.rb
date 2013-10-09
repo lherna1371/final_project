@@ -249,7 +249,6 @@ describe RestaurantsController do
     end
 
     context "with previously created restaurant" do
-
       it "should find the correct restaurant" do
         delete :destroy, id: @r.id
         assigns(:restaurant).should eq @r
