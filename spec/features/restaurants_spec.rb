@@ -40,7 +40,7 @@ feature "Add a Restaurant" do
       end
 
       it "should have a flash error" do
-        page.should have_content 'must log'
+        page.should have_content 'Please log'
       end
     end
   end

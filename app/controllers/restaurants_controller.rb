@@ -15,9 +15,9 @@ class RestaurantsController < ApplicationController
       end
     else
       if logged_in? && current_user.restaurants.count > 0
-        favs = current_user.restaurants
-        others = Restaurant.all - favs
-        @restaurants = (favs + others).uniq.paginate(:page => params[:page], :per_page => 24)
+        favorites = current_user.restaurants
+        others = Restaurant.all - favorites
+        @restaurants = (favorites + others).uniq.paginate(:page => params[:page], :per_page => 24)
       else
         @restaurants = Restaurant.all.paginate(:page => params[:page], :per_page => 24)
       end
@@ -31,18 +31,11 @@ class RestaurantsController < ApplicationController
   def create
     new_rest = Restaurant.new(restaurant_attributes)
     if params[:restaurant][:name] != ""
-      potential_url = params[:restaurant][:name].downcase.gsub(' ','')
+      potential_url = potential(new_rest.name)
       new_rest.url = make_url(new_rest, potential_url)
       if new_rest.save
-        if request.xhr?
-          loc = {}
-          loc[:id] = new_rest.id
-          loc[:address] = street_city(new_rest)
-          render :json => loc
-        else
-          flash[:success] = "Restaurant Added"
-          redirect_to "/#{new_rest.url}/dishes"
-        end
+        flash[:success] = "Restaurant Added"
+        redirect_to "/#{new_rest.url}/dishes"
       else
         flash[:error] = "Restaurant was not saved"
         render 'new'
@@ -54,16 +47,8 @@ class RestaurantsController < ApplicationController
     end
   end
 
-  def show
-    @restaurant = Restaurant.find_by_url(params[:restname].downcase)
-    if @restaurant.nil?
-      render 'not_found'
-    end
-  end
-
   def edit
     @restaurant = Restaurant.find_by_url(params[:restname].downcase)
-    
     if @restaurant.nil?
       render 'not_found'
     end
@@ -72,11 +57,11 @@ class RestaurantsController < ApplicationController
   def update
     @restaurant = Restaurant.find(params[:id])
     if params[:restaurant][:name] && params[:restaurant][:name] != @restaurant.name
-      potential = params[:restaurant][:name].downcase.gsub(' ','')
-      @restaurant.url = make_url(@restaurant, potential)
+      potential_url = potential(params[:restaurant][:name])
+      @restaurant.url = make_url(@restaurant, potential_url)
     end
     @restaurant.update_attributes(restaurant_attributes)
-    redirect_to @restaurant
+    redirect_to "/#{@restaurant.url}/dishes"
   end
 
   def destroy
@@ -91,29 +76,20 @@ class RestaurantsController < ApplicationController
   end
 
   def desc
-    @rest = Restaurant.where(:url => params[:restname]).first
+    @rest = Restaurant.find_by_url(params[:restname])
     render 'desc', :layout => false
   end
 
   def coords
-    if request.xhr?
-      coords = {}
-      @rest = Restaurant.where(:url => params[:restname]).first
-      coords[:latitude] = @rest.latitude
-      coords[:longitude] = @rest.longitude
-      coords[:address] = street_city(@rest)
-      coords[:gsearch] = gsearch(@rest)
-      render :json => coords
-    end
+    @rest = Restaurant.find_by_url(params[:restname])
+    coords = coords_hash(@rest)
+    render :json => coords
   end
 
   def setcoords
-    if params[:url] || params[:id]
+    if params[:url]
       rest = Restaurant.find_by_url(params[:url])
-      rest ||= Restaurant.find(params[:id])
-      rest.latitude = params[:lat]
-      rest.longitude = params[:lon]
-      rest.save
+      rest.update_attributes(:latitude => params[:lat], :longitude => params[:lon])
       render json: rest
     end
   end
@@ -122,12 +98,5 @@ class RestaurantsController < ApplicationController
   
   def restaurant_attributes
     params.require(:restaurant).permit(:name, :address, :city, :state, :zip, :latitude, :longitude, :url, :cuisine)
-  end
-
-  def require_login
-    unless logged_in?
-      flash[:error] = "You must log in to add a new restaurant"
-      redirect_to :back
-    end
   end
 end

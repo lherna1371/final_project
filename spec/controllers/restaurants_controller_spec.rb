@@ -27,12 +27,12 @@ describe RestaurantsController do
 
     context 'As Visitor' do
       before(:each) do
-        request.env["HTTP_REFERER"] = "/restaurants"
+        request.env["HTTP_REFERER"] = "/"
         get :new
       end
 
       it "should redirect back to where it came" do
-        response.should  redirect_to restaurants_path
+        response.should redirect_to "/"
       end
     end
   end
@@ -53,39 +53,20 @@ describe RestaurantsController do
 
   end
 
-  describe "GET #show" do
-    it "should render the restaurant page given valid restaurant" do
-      two_rest
-      get :show, :restname => 'theBristol'
-      response.should render_template :show
-    end
-
-    it "should have the correct restaurant attribute" do
-      rs = two_rest
-      get :show, :restname => 'theBristol'
-      assigns(:restaurant).should eq rs.first
-    end
-
-    it "should render an error page on incorrect restaurant" do
-      get :show, :restname => 'fakerest'
-      response.should render_template :not_found
-    end
-  end
-
   describe 'GET #edit' do
     context "without logging in" do
       before(:each) do
         @rs = two_rest
-        request.env["HTTP_REFERER"] = "/cumin"
+        request.env["HTTP_REFERER"] = "/"
         get :edit, :restname => 'cumin'
       end
 
       it "should not edit the restaurant" do
-        flash.now[:error].should =~ /must log/
+        flash.now[:error].should =~ /Please log/
       end
 
       it "should stay on edit page" do
-        response.should redirect_to "/cumin"
+        response.should redirect_to "/"
       end
     end
 
@@ -124,6 +105,11 @@ describe RestaurantsController do
       put :update, :id => @b.id, :restaurant => @attr
       @b.reload
       @b.name.should eq ('Bristol')
+    end
+
+    it "redirects to /:restaurant.url/dishes" do
+      put :update, :id => @b.id, :restaurant => @attr
+      response.should redirect_to "/bristol/dishes"
     end
 
     describe "url naming" do
@@ -170,7 +156,7 @@ describe RestaurantsController do
     
     context "when not logged in" do
       before(:each) do
-        request.env["HTTP_REFERER"] = restaurants_path
+        request.env["HTTP_REFERER"] = '/'
       end
 
       it "should not save to db" do
@@ -179,9 +165,9 @@ describe RestaurantsController do
           }.not_to change(Restaurant, :count)
       end
 
-      it "should redirect to restaurants page" do
+      it "should redirect back" do
         post :create, restaurant: @attr
-        response.should redirect_to restaurants_path
+        response.should redirect_to '/'
       end
     end
 
@@ -225,26 +211,32 @@ describe RestaurantsController do
             post :create, :restaurant => @attr
           end
           
-          it "should generate a no-name error if name is missing" do
+          it "generates a no-name error if name is missing" do
             flash.now[:error].should =~ /Needs a Name/
           end
 
-          it "should render the new template" do
+          it "renders the new template" do
             response.should render_template 'new'
           end
         end
 
-        it "should deny a new restaurant" do
+        it "denies a new restaurant" do
           @attr.delete(:address)
           expect {
             post :create, restaurant: @attr
           }.not_to change(Restaurant, :count)
         end
 
-        it "should render the new template" do
+        it "renders the new template" do
           @attr.delete(:address)
           post :create, restaurant: @attr
           response.should render_template 'new'
+        end
+
+        it "has a flash error" do
+          @attr.delete(:address)
+          post :create, restaurant: @attr
+          flash.now[:error].should =~ /not saved/i
         end
       end
     end
@@ -257,7 +249,6 @@ describe RestaurantsController do
     end
 
     context "with previously created restaurant" do
-
       it "should find the correct restaurant" do
         delete :destroy, id: @r.id
         assigns(:restaurant).should eq @r
